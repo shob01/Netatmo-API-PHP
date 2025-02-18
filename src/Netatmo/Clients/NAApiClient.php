@@ -292,32 +292,29 @@ class NAApiClient
         // Split the HTTP response into header and body.
         list($headers, $body) = explode("\r\n\r\n", $result);
         $headers = explode("\r\n", $headers);
-        //Only 2XX response are considered as a success
-        if(strpos($headers[0], 'HTTP/1.1 2') !== FALSE)
-        {
+        // split HTTP/ response
+        preg_match('/^HTTP\/(.*) ([0-9]{3,3}) (.*)$/', $headers[0], $matches);
+        // matches[0] -> HTTP/version status text i.e. HTTP/2 200 OK
+        // matches[1] -> HTTP version i.e. 1.1 or 2
+        $http_version = $matches[1];
+        // matches[2] -> Status code i.e. 200, 400 ...
+        $http_status_code = $matches[2];
+        // matches[3] -> (optional) Status text i.e. OK, Bad Request ...
+        $http_status_text = $matches[3];
+
+        //Only Status 2XX response are considered as a success
+        if ($http_status_code[0] === '2') {
             $decode = json_decode($body, TRUE);
-            if(!$decode)
-            {
-                if (preg_match('/^HTTP\/1.1 ([0-9]{3,3}) (.*)$/', $headers[0], $matches))
-                {
-                    throw new NAJsonErrorType($matches[1], $matches[2]);
-                }
-                else throw new NAJsonErrorType(200, "OK");
+            if (!$decode) {
+                throw new NAJsonErrorType($http_status_code, $http_status_text);
             }
             return $decode;
-        }
-        else
-        {
-            if (!preg_match('/^HTTP\/1.1 ([0-9]{3,3}) (.*)$/', $headers[0], $matches))
-            {
-                $matches = array("", 400, "bad request");
-            }
+        } else {
             $decode = json_decode($body, TRUE);
-            if(!$decode)
-            {
-                throw new NAApiErrorType($matches[1], $matches[2], null);
+            if (!$decode) {
+                throw new NAApiErrorType($http_status_code, $http_status_text, null);
             }
-            throw new NAApiErrorType($matches[1], $matches[2], $decode);
+            throw new NAApiErrorType($http_status_code, $http_status_text, $decode);
         }
     }
 
