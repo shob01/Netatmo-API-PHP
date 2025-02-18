@@ -19,6 +19,9 @@ class NAApiErrorType extends NAClientException
         }
         else
         {
+            // preserve the information provided in result -> error 
+            if(isset($result["error"]))
+                $message = sprintf("%s error=%s",$message, $result["error"]);
             parent::__construct($code, $message, API_ERROR_TYPE);
         }
     }
